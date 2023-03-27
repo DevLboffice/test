@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>test one</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+
+        <!-- Fonts -->
+        <link href="https://fonts.bunny.net/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+
+
+        <style>
+            body {
+                font-family: 'Nunito', sans-serif;
+            }
+            table, th, td {
+                border: 1px solid black;
+            }
+        </style>
+    </head>
+    <body >    
+        <div>
+        <table id="tbl-imput" border="2">
+                <tr>
+                    <td>Enter new entry&nbsp;:&nbsp;</td>                    
+                    <td><input type="text" id="txt_input" value="" placeholder="TM name"></td>
+                    <td>Shift HRS&nbsp;:&nbsp;</td>                    
+                    <td><input type="text" id="txt_inputShift" value="" placeholder="total shift hrs"></td>
+                    <td>
+                        <input type="checkbox" id="myCheck" onclick="myFunction()" >
+                        <label for="myCheck">Time Switch <span style= "display:block; background-color:chartreuse;" id="on">Auto is On</span><span style= "display:none; background-color:red" id="off">Auto is Off</span></label>                                              
+                    </td>
+                    <td><input type="text" id="txt_inputTime" value="" style= "display:none" placeholder="start time in format hh:mm"></td>
+                    <td><button id="btn_enter" onclick="newRow()">Add</button></td>
+                </tr>
+            </table>
+        </div>
+        <div>
+            <table id="tbl_list" border="2">
+                <tr>
+                    <td>sn</td>
+                    <td>name</td>
+                    <td>In Time</td>
+                    <td>First Break</td>
+                    <td>Second Break</td>
+                    <td>Shift Length</td>
+                    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>                    
+                </tr>                            
+            </table>           
+        </div>
+    </body>
+    <script>    
+        var AutoTimeSwitch = 1; //1: on and 0: off
+        var mapSnShift = new Map();
+        var mapSnName = new Map();
+        var mapSnIntime = new Map();
+        var mapSnBreak1time = new Map();
+
+        function myFunction() {
+            var checkBox = document.getElementById("myCheck");
+            var text = document.getElementById("txt_inputTime");
+            var on = document.getElementById("on");
+            var off = document.getElementById("off");
+            if (checkBox.checked == true){
+                text.style.display = "block";
+                off.style.display = "block";
+                on.style.display = "none";
+                AutoTimeSwitch = 0;
+            } else {
+                text.style.display = "none";
+                off.style.display = "none";
+                on.style.display= "block";
+                AutoTimeSwitch = 1;
+            }
+        }
+
+        function gettime(){          
+            let currentTime = new Date().getTime();
+            return new Date(currentTime).toLocaleTimeString().slice(0,5) ;
+        }
+
+        function firstBreakTime(date, hours = 2) {  
+            //check the autoswitch and write the logic separately for auto time and manual time
+            var dt = new Date();
+            if(AutoTimeSwitch == 1){
+                
+                dt.setHours(date.substr(0,date.indexOf(":")));
+                dt.setMinutes(date.substr(date.indexOf(":")+1));
+                dt.setSeconds(0);
+            
+                var IncreasedHr = dt.getHours() + hours;                        
+                return IncreasedHr+":"+dt.getMinutes();
+            }else{
+                console.log(date);
+                dt.setHours(date.substr(0,date.indexOf(":")));
+                dt.setMinutes(date.substr(date.indexOf(":")+1));
+                dt.setSeconds(0);
+
+                var IncreasedHr = dt.getHours() + hours;                        
+                return IncreasedHr+":"+dt.getMinutes();
+            }
+            
+                       
+        }
+         
+
+        function newRow(){            
+            var totRows=$('#tbl_list tr').length;
+            var nameInput = document.getElementById('txt_input').value;
+            var shiftInput = $('#txt_inputShift').val();
+            var timeInput =$('#txt_inputTime').val();
+
+            if (nameInput == ""){
+                alert("Name is empty");                
+            }else if(shiftInput == ""){
+                alert("Shift HRS is empty");
+            }else if(AutoTimeSwitch == 0 && timeInput == ""){
+                alert("Start time is empty");
+            }else{
+                var valmessage = inputValidation(shiftInput,timeInput);
+                if(valmessage == "pass"){
+                    mapSnName.set(totRows, $('#txt_input').val());
+                    mapSnShift.set(totRows, shiftInput);
+                    $('#tbl_list').append("<tr><td><div id='lbl-sn-"+totRows +"'></div></td><td><div id='lbl-name-"+totRows+"'></div></td><td><div id='lbl-time-"+totRows +"'></div></td><td><div id='lbl-breakTime-"+totRows +"'></div></td><td><div id='lbl-breakTime2-"+totRows +"'></div></td><td><div id='lbl-shiftlength-"+totRows +"'></div></td></tr>");                                
+                    $('#lbl-sn-'+totRows).append(totRows);
+                    $('#lbl-name-'+totRows).append(nameInput); 
+                    if(AutoTimeSwitch == 1){
+                        $('#lbl-time-'+totRows).append(gettime()); 
+                        $('#lbl-breakTime-'+totRows).append(calculateBreak(mapSnShift.get(totRows),gettime()));
+                    }else{
+                        $('#lbl-time-'+totRows).append(timeInput); 
+                        $('#lbl-breakTime-'+totRows).append(calculateBreak(mapSnShift.get(totRows),$('#lbl-time-'+totRows).text()));
+                    }                                 
+                    $('#lbl-breakTime2-'+totRows).append(calculateBreak2(mapSnShift.get(totRows),$('#lbl-breakTime-'+totRows).text())); 
+                    mapSnIntime.set(totRows, $('#lbl-time-'+totRows).text());
+                    mapSnBreak1time.set(totRows, $('#lbl-time-'+totRows).text());
+                    $('#lbl-shiftlength-'+totRows).append(shiftInput);
+                    $('#txt_input').val("");
+                    $('#txt_inputShift').val("");
+                    $('#txt_inputTime').val("");
+                }else{
+                    alert(valmessage);
+                }                
+            }                        
+        }       
+        
+        function calculateBreak(shiftHr, startTime){
+            if(shiftHr <= 4){
+                return 'No Break';
+            }else{
+                return firstBreakTime(startTime, 2);
+            }
+        }
+
+
+        function calculateBreak2(shiftHr, startTime){
+            if(shiftHr <= 5){
+                return 'No Break';
+            }else if(shiftHr > 5 && shiftHr <= 6) {
+                return 'no second break';
+            }else if(shiftHr > 6 && shiftHr < 8 ){
+                return secBreakTime(startTime, 2,30);
+            }else{
+                return secBreakTime(startTime, 2,30);
+            }
+        }
+
+
+        function secBreakTime(date, hours = 2, min) {              
+            var dt = new Date();
+            dt.setHours(date.substr(0,date.indexOf(":")));
+            dt.setMinutes(date.substr(date.indexOf(":")+1));
+            dt.setSeconds(0);
+            
+            var IncreasedHr = dt.getHours() + hours;  
+            var incMin = dt.getMinutes() + min; 
+
+            console.log(incMin);  
+                   
+            if(incMin == 60){
+                IncreasedHr = IncreasedHr + 1;
+                incMin = '00';
+            }else if(incMin > 60){
+                var diff = incMin - 60;
+                console.log(diff);
+                IncreasedHr = IncreasedHr + 1;
+                incMin = diff;
+                if (incMin < 10){
+                    
+                    incMin = '0'+ incMin;
+                    
+                }
+            }else{
+                return IncreasedHr+":"+incMin;
+            }
+
+            return IncreasedHr+":"+incMin;
+                       
+        } 
+        
+        function inputValidation(shiftHRS, time) {
+            if(shiftHRS < 4 && shiftHRS > 10){
+                return "shift Hour has to be minimum 4 and cannot exceed 10";
+            }
+            if(timeFormatCheck(time)!='ok'){
+                return "Time format is not correct! Please enter time in correct format";
+            }
+            return "pass";
+        }
+
+        function timeFormatCheck(time) {
+            var h = time.substr(0,time.indexOf(":"));
+            var m = time.substr(time.indexOf(":")+1);
+            return 'ok';
+        }
+        </script>
+</html>
